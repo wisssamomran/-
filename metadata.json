@@ -1,0 +1,6 @@
+{
+  "name": "دلنّي - المنصة العقارية اليمنية",
+  "description": "المنصة العقارية اليمنية الرائدة لاكتشاف العقارات، والبحث المتقدم والخريطة التفاعلية، وإدارة الإعلانات، والتحقق، والمنشآت العقارية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
