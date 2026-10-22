@@ -1,4 +1,6 @@
 import { PropertyContract, ContractStatus, PropertyBooking, Listing } from '../types';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 /**
  * Generates an SVG QR code for visual verification stamp in the printed document
@@ -932,5 +934,205 @@ export async function printCertificateA4(booking: PropertyBooking, contract?: Pr
   const success = await printViaIsolatedIframe(html);
   if (!success) {
     window.print();
+  }
+}
+
+/**
+ * Direct PDF file generation and download for contracts.
+ * Renders the official contract page into a standard A4 PDF and triggers instant browser download.
+ */
+export async function downloadContractPdf(
+  contract: PropertyContract,
+  selectedVersionNum?: number
+): Promise<void> {
+  const isSale = contract.contractType === 'sale';
+  const fileName = `${isSale ? 'عقد-بيع-عقاري' : 'عقد-إيجار-عقاري'}-${contract.contractNumber}.pdf`;
+
+  const fullHtml = generateContractA4Html(contract, selectedVersionNum);
+
+  const tempWrapper = document.createElement('div');
+  tempWrapper.style.position = 'fixed';
+  tempWrapper.style.left = '-9999px';
+  tempWrapper.style.top = '0';
+  tempWrapper.style.width = '794px'; // 210mm in pixels at 96 DPI
+  tempWrapper.style.backgroundColor = '#ffffff';
+  tempWrapper.style.color = '#111827';
+  tempWrapper.style.padding = '24px 32px';
+  tempWrapper.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Tajawal", "Cairo", Tahoma, Arial, sans-serif';
+  tempWrapper.style.direction = 'rtl';
+  tempWrapper.style.zIndex = '-9999';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(fullHtml, 'text/html');
+  const styleContent = doc.querySelector('style')?.innerHTML || '';
+  const bodyContent = doc.body.innerHTML;
+
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = styleContent;
+  tempWrapper.appendChild(styleEl);
+
+  const contentDiv = document.createElement('div');
+  contentDiv.innerHTML = bodyContent;
+  tempWrapper.appendChild(contentDiv);
+
+  document.body.appendChild(tempWrapper);
+
+  try {
+    await new Promise((r) => setTimeout(r, 200));
+
+    const canvas = await html2canvas(tempWrapper, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: 1024
+    });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 8;
+    const contentWidth = pageWidth - (margin * 2);
+    const contentHeight = pageHeight - (margin * 2);
+
+    const pageCanvasHeight = (canvas.width / contentWidth) * contentHeight;
+    const totalPages = Math.ceil(canvas.height / pageCanvasHeight);
+
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      const currentSliceHeight = Math.min(pageCanvasHeight, canvas.height - i * pageCanvasHeight);
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = currentSliceHeight;
+
+      const ctx = sliceCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          i * pageCanvasHeight,
+          canvas.width,
+          currentSliceHeight,
+          0,
+          0,
+          canvas.width,
+          currentSliceHeight
+        );
+      }
+
+      const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+      const slicePdfHeight = (currentSliceHeight / canvas.width) * contentWidth;
+      pdf.addImage(sliceImgData, 'JPEG', margin, margin, contentWidth, slicePdfHeight, undefined, 'FAST');
+    }
+
+    pdf.save(fileName);
+  } finally {
+    if (document.body.contains(tempWrapper)) {
+      document.body.removeChild(tempWrapper);
+    }
+  }
+}
+
+/**
+ * Direct PDF file generation and download for transaction completion certificate.
+ */
+export async function downloadCertificatePdf(
+  booking: PropertyBooking,
+  contract?: PropertyContract,
+  listing?: Listing
+): Promise<void> {
+  const fileName = `شهادة-إتمام-صفقة-${booking.bookingNumber}.pdf`;
+  const fullHtml = generateCertificateA4Html(booking, contract, listing);
+
+  const tempWrapper = document.createElement('div');
+  tempWrapper.style.position = 'fixed';
+  tempWrapper.style.left = '-9999px';
+  tempWrapper.style.top = '0';
+  tempWrapper.style.width = '794px';
+  tempWrapper.style.backgroundColor = '#ffffff';
+  tempWrapper.style.color = '#0F2942';
+  tempWrapper.style.padding = '24px';
+  tempWrapper.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Tajawal", "Cairo", Tahoma, Arial, sans-serif';
+  tempWrapper.style.direction = 'rtl';
+  tempWrapper.style.zIndex = '-9999';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(fullHtml, 'text/html');
+  const styleContent = doc.querySelector('style')?.innerHTML || '';
+  const bodyContent = doc.body.innerHTML;
+
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = styleContent;
+  tempWrapper.appendChild(styleEl);
+
+  const contentDiv = document.createElement('div');
+  contentDiv.innerHTML = bodyContent;
+  tempWrapper.appendChild(contentDiv);
+
+  document.body.appendChild(tempWrapper);
+
+  try {
+    await new Promise((r) => setTimeout(r, 200));
+
+    const canvas = await html2canvas(tempWrapper, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: 1024
+    });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 10;
+    const contentWidth = pageWidth - (margin * 2);
+    const contentHeight = pageHeight - (margin * 2);
+
+    const pageCanvasHeight = (canvas.width / contentWidth) * contentHeight;
+    const totalPages = Math.ceil(canvas.height / pageCanvasHeight);
+
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      const currentSliceHeight = Math.min(pageCanvasHeight, canvas.height - i * pageCanvasHeight);
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = currentSliceHeight;
+
+      const ctx = sliceCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          i * pageCanvasHeight,
+          canvas.width,
+          currentSliceHeight,
+          0,
+          0,
+          canvas.width,
+          currentSliceHeight
+        );
+      }
+
+      const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+      const slicePdfHeight = (currentSliceHeight / canvas.width) * contentWidth;
+      pdf.addImage(sliceImgData, 'JPEG', margin, margin, contentWidth, slicePdfHeight, undefined, 'FAST');
+    }
+
+    pdf.save(fileName);
+  } finally {
+    if (document.body.contains(tempWrapper)) {
+      document.body.removeChild(tempWrapper);
+    }
   }
 }

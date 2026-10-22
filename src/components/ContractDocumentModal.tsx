@@ -9,7 +9,7 @@ import {
   ContractType,
   Listing
 } from '../types';
-import { printContractA4 } from '../utils/contractPrintHelper';
+import { printContractA4, downloadContractPdf } from '../utils/contractPrintHelper';
 import {
   X,
   Printer,
@@ -209,16 +209,37 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
     }
   };
 
-  // Handle Print Action (Official Yemeni Real Estate Contract - Standard A4 Size)
-  const handlePrint = async () => {
+  // Handle Direct PDF Download Action (Official Yemeni Real Estate Contract - Standard A4 Size)
+  const handleDownloadPdf = async () => {
     if (!contract) return;
     setIsPrinting(true);
     try {
-      showToast('جاري تجهيز وثيقة العقد بحجم A4 القياسي للطباعة...', 'info');
+      showToast('جاري إنشاء وتنزيل ملف العقد بصيغة PDF...', 'info');
+      await downloadContractPdf(contract, selectedVersionNum || undefined);
+      showToast('تم تنزيل ملف العقد PDF بنجاح على جهازك!', 'success');
+    } catch (err) {
+      console.error('Error generating contract PDF:', err);
+      showToast('جاري فتح شاشة الطباعة وحفظ PDF كبديل...', 'warning');
+      await printContractA4(contract, selectedVersionNum || undefined);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  // Handle Print Action (Direct A4 PDF download as primary behavior)
+  const handlePrint = async () => {
+    await handleDownloadPdf();
+  };
+
+  // Optional physical printer action
+  const handlePrintPaper = async () => {
+    if (!contract) return;
+    setIsPrinting(true);
+    try {
+      showToast('جاري تجهيز العقد للطباعة الورقية بحجم A4...', 'info');
       await printContractA4(contract, selectedVersionNum || undefined);
     } catch (err) {
-      console.error('Error generating contract print:', err);
-      // Fallback
+      console.error('Error printing contract:', err);
       setActiveTab('document');
       setTimeout(() => {
         window.print();
@@ -611,18 +632,29 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
             )}
 
             <button
-              onClick={handlePrint}
+              onClick={handleDownloadPdf}
               disabled={isPrinting || !contract}
               type="button"
               className="px-3.5 py-2 rounded-xl bg-[#12A889] hover:bg-[#0fa37f] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-60"
-              title="طباعة وتصدير العقد بحجم A4 القياسي"
+              title="تنزيل ملف العقد مباشرة بصيغة PDF مقاس A4"
             >
               {isPrinting ? (
                 <Clock className="w-4 h-4 animate-spin" />
               ) : (
-                <Printer className="w-4 h-4" />
+                <Download className="w-4 h-4" />
               )}
-              <span>{isPrinting ? 'جاري تجهيز A4...' : 'طباعة العقد (A4)'}</span>
+              <span>{isPrinting ? 'جاري تنزيل PDF...' : 'تنزيل العقد PDF'}</span>
+            </button>
+
+            <button
+              onClick={handlePrintPaper}
+              disabled={isPrinting || !contract}
+              type="button"
+              className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-white/15 disabled:opacity-60"
+              title="طباعة العقد على طابعة ورقية A4"
+            >
+              <Printer className="w-3.5 h-3.5 text-emerald-300" />
+              <span className="hidden sm:inline">طباعة ورقية</span>
             </button>
 
             <button
@@ -1492,18 +1524,29 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
+              onClick={handleDownloadPdf}
               disabled={isPrinting || !contract}
               type="button"
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
-              title="طباعة وتصدير العقد بحجم A4 القياسي"
+              className="px-4 py-2 rounded-xl bg-[#12A889] hover:bg-[#0fa37f] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 shadow-xs"
+              title="تنزيل ملف العقد مباشرة بصيغة PDF مقاس A4"
             >
               {isPrinting ? (
                 <Clock className="w-4 h-4 animate-spin" />
               ) : (
-                <Printer className="w-4 h-4" />
+                <Download className="w-4 h-4" />
               )}
-              <span>{isPrinting ? 'جاري تجهيز الطباعة...' : 'طباعة العقد (A4)'}</span>
+              <span>{isPrinting ? 'جاري إنشاء PDF...' : 'تنزيل العقد PDF'}</span>
+            </button>
+
+            <button
+              onClick={handlePrintPaper}
+              disabled={isPrinting || !contract}
+              type="button"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+              title="طباعة العقد على طابعة ورقية A4"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة ورقية</span>
             </button>
 
             <button

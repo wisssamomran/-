@@ -47,11 +47,12 @@ import {
   Scale,
   FileWarning,
   Printer,
+  Download,
   ShieldAlert,
   Award
 } from 'lucide-react';
 import { ContractDocumentModal } from './ContractDocumentModal';
-import { printCertificateA4 } from '../utils/contractPrintHelper';
+import { printCertificateA4, downloadCertificatePdf } from '../utils/contractPrintHelper';
 
 interface BookingDealWorkspaceModalProps {
   bookingId: string;
@@ -474,11 +475,13 @@ export const BookingDealWorkspaceModal: React.FC<BookingDealWorkspaceModalProps>
     if (!booking) return;
     setIsPrintingCert(true);
     try {
-      showToast('جاري تجهيز شهادة إتمام المعاملة بحجم A4 للطباعة...', 'info');
-      await printCertificateA4(booking, currentContract, listing);
+      showToast('جاري إنشاء وتنزيل شهادة إتمام المعاملة بصيغة PDF...', 'info');
+      await downloadCertificatePdf(booking, currentContract, listing);
+      showToast('تم تنزيل شهادة إتمام المعاملة PDF بنجاح!', 'success');
     } catch (err) {
-      console.error('Error printing completion certificate:', err);
-      window.print();
+      console.error('Error downloading certificate PDF:', err);
+      showToast('جاري التحويل لطباعة الشهادة...', 'warning');
+      await printCertificateA4(booking, currentContract, listing);
     } finally {
       setIsPrintingCert(false);
     }
@@ -1383,16 +1386,40 @@ export const BookingDealWorkspaceModal: React.FC<BookingDealWorkspaceModalProps>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={handlePrintCertificate}
-                          disabled={isPrintingCert}
-                          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors self-start sm:self-auto disabled:opacity-50"
-                          title="طباعة شهادة الإتمام الرسمية بحجم A4"
-                        >
-                          <Printer className="w-4 h-4 text-emerald-300" />
-                          <span>{isPrintingCert ? 'جاري تجهيز الشهادة...' : 'طباعة شهادة الإتمام (A4)'}</span>
-                        </button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                          <button
+                            type="button"
+                            onClick={handlePrintCertificate}
+                            disabled={isPrintingCert}
+                            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-[#0F2942] text-xs font-black flex items-center gap-2 cursor-pointer transition-all shadow-md disabled:opacity-50"
+                            title="تنزيل شهادة الإتمام مباشرة بصيغة PDF مقاس A4"
+                          >
+                            <Download className="w-4 h-4 text-[#0F2942]" />
+                            <span>{isPrintingCert ? 'جاري إنشاء PDF...' : 'تنزيل الشهادة PDF'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!booking) return;
+                              setIsPrintingCert(true);
+                              try {
+                                showToast('جاري تجهيز الشهادة للطباعة الورقية...', 'info');
+                                await printCertificateA4(booking, currentContract, listing);
+                              } catch (e) {
+                                window.print();
+                              } finally {
+                                setIsPrintingCert(false);
+                              }
+                            }}
+                            disabled={isPrintingCert}
+                            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50"
+                            title="طباعة الشهادة على طابعة ورقية A4"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-300" />
+                            <span className="hidden sm:inline">طباعة ورقية</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Certificate Core Metadata Grid */}
