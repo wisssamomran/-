@@ -51,6 +51,7 @@ import {
   Award
 } from 'lucide-react';
 import { ContractDocumentModal } from './ContractDocumentModal';
+import { printCertificateA4 } from '../utils/contractPrintHelper';
 
 interface BookingDealWorkspaceModalProps {
   bookingId: string;
@@ -464,6 +465,22 @@ export const BookingDealWorkspaceModal: React.FC<BookingDealWorkspaceModalProps>
       }
     } finally {
       setIsGeneratingContract(false);
+    }
+  };
+
+  const [isPrintingCert, setIsPrintingCert] = useState(false);
+
+  const handlePrintCertificate = async () => {
+    if (!booking) return;
+    setIsPrintingCert(true);
+    try {
+      showToast('جاري تجهيز شهادة إتمام المعاملة بحجم A4 للطباعة...', 'info');
+      await printCertificateA4(booking, currentContract, listing);
+    } catch (err) {
+      console.error('Error printing completion certificate:', err);
+      window.print();
+    } finally {
+      setIsPrintingCert(false);
     }
   };
 
@@ -1368,11 +1385,13 @@ export const BookingDealWorkspaceModal: React.FC<BookingDealWorkspaceModalProps>
 
                         <button
                           type="button"
-                          onClick={() => window.print()}
-                          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors self-start sm:self-auto"
+                          onClick={handlePrintCertificate}
+                          disabled={isPrintingCert}
+                          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors self-start sm:self-auto disabled:opacity-50"
+                          title="طباعة شهادة الإتمام الرسمية بحجم A4"
                         >
                           <Printer className="w-4 h-4 text-emerald-300" />
-                          <span>طباعة شهادة الإتمام</span>
+                          <span>{isPrintingCert ? 'جاري تجهيز الشهادة...' : 'طباعة شهادة الإتمام (A4)'}</span>
                         </button>
                       </div>
 

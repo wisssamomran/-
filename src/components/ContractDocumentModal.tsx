@@ -9,6 +9,7 @@ import {
   ContractType,
   Listing
 } from '../types';
+import { printContractA4 } from '../utils/contractPrintHelper';
 import {
   X,
   Printer,
@@ -110,6 +111,9 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Printing state
+  const [isPrinting, setIsPrinting] = useState(false);
+
   // Load contract data
   useEffect(() => {
     if (!isOpen) return;
@@ -205,9 +209,23 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
     }
   };
 
-  // Handle Print Action
-  const handlePrint = () => {
-    window.print();
+  // Handle Print Action (Official Yemeni Real Estate Contract - Standard A4 Size)
+  const handlePrint = async () => {
+    if (!contract) return;
+    setIsPrinting(true);
+    try {
+      showToast('جاري تجهيز وثيقة العقد بحجم A4 القياسي للطباعة...', 'info');
+      await printContractA4(contract, selectedVersionNum || undefined);
+    } catch (err) {
+      console.error('Error generating contract print:', err);
+      // Fallback
+      setActiveTab('document');
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   // Handle Copy Full Contract Text
@@ -483,29 +501,57 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
       {/* Print-specific style overrides */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
           }
-          #official-contract-print-area, #official-contract-print-area * {
-            visibility: visible;
-          }
-          #official-contract-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px !important;
-            background: white !important;
-            color: black !important;
-            box-shadow: none !important;
-            border: none !important;
+          html, body {
+            overflow: visible !important;
+            height: auto !important;
+            min-height: 100% !important;
+            background: #ffffff !important;
+            color: #111827 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .no-print {
             display: none !important;
           }
+          .fixed.inset-0 {
+            position: static !important;
+            inset: auto !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            overflow: visible !important;
+            display: block !important;
+            padding: 0 !important;
+          }
+          .overflow-y-auto {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+          }
+          #official-contract-print-area {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 10px 0 !important;
+            background: white !important;
+            color: black !important;
+            box-shadow: none !important;
+            border: none !important;
+            display: block !important;
+          }
           .page-break {
             page-break-before: always;
+            break-before: page;
+          }
+          .avoid-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
         }
       `}</style>
@@ -566,12 +612,17 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
 
             <button
               onClick={handlePrint}
+              disabled={isPrinting || !contract}
               type="button"
-              className="px-3.5 py-2 rounded-xl bg-[#12A889] hover:bg-[#0fa37f] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-              title="طباعة وتصدير العقد PDF"
+              className="px-3.5 py-2 rounded-xl bg-[#12A889] hover:bg-[#0fa37f] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-60"
+              title="طباعة وتصدير العقد بحجم A4 القياسي"
             >
-              <Printer className="w-4 h-4" />
-              <span>طباعة / PDF</span>
+              {isPrinting ? (
+                <Clock className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isPrinting ? 'جاري تجهيز A4...' : 'طباعة العقد (A4)'}</span>
             </button>
 
             <button
@@ -1442,11 +1493,17 @@ export const ContractDocumentModal: React.FC<ContractDocumentModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
+              disabled={isPrinting || !contract}
               type="button"
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+              title="طباعة وتصدير العقد بحجم A4 القياسي"
             >
-              <Printer className="w-4 h-4" />
-              <span>طباعة العقد</span>
+              {isPrinting ? (
+                <Clock className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isPrinting ? 'جاري تجهيز الطباعة...' : 'طباعة العقد (A4)'}</span>
             </button>
 
             <button
